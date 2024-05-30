@@ -8,15 +8,28 @@ class req_method(Enum):
     GET = 0
     POST = 1
     DOWNLOAD = 2
+    PUT = 3
+    DEL = 4
+    PATCH = 5
 
 GET = req_method.GET
 POST = req_method.POST
 DOWNLOAD = req_method.DOWNLOAD
+PUT = req_method.PUT
+DEL = req_method.DEL
+PATCH = req_method.PATCH
 
 @dataclass
 class endpoint:
     method: req_method
     endpoint: Path
+
+class SortingMethod(str, Enum):
+    Relevance = "relevance"
+    Downloads = "downloads"
+    Follows = "follows"
+    Newest = "newest"
+    Updated = "updated"
 
 class Required(str, Enum):
     Required = "required"
@@ -68,9 +81,9 @@ class GalleryImage:
     :param datetime.datetime: The date and time the gallery image was created
     :param int ordering: The order of the gallery image. Gallery images are sorted by this field and then alphabetically by title.
     """
-    url: str
-    featured: bool
-    created: datetime
+    url: Optional[str] = None
+    featured: Optional[bool] = None
+    created: Optional[datetime] = None
     title: Optional[str] = None
     description: Optional[str] = None
     ordering: Optional[int] = None
@@ -217,11 +230,12 @@ class Project:
     :param datetime.datetime|None approved: The date the project's status was set to an approved status
     :param datetime.datetime|None queued: The date the project's status was submitted to moderators for review
     :param int followers: The total number of users following the project
+    :param organization: What the fuck is this, modrinth? I don't even know type of this thing, it just randomly appeared, even though it's not present in docs
     :param modrinth.types.ProjectLicense license: The license of the project
     :param list[str] versions: A list of the version IDs of the project (will never be empty unless draft status)
     :param list[str] game_versions: A list of all of the game versions supported by the project
     :param list[str] loaders: A list of all of the loaders supported by the project
-    :param list[modrinth.types.GalleryImage] gallery: A list of images that have been uploaded to the project's gallery 
+    :param list[modrinth.types.GalleryImage] gallery: A list of images that have been uploaded to the project's gallery
     """
     slug: str
     title: str
@@ -237,6 +251,7 @@ class Project:
     published: datetime
     updated: datetime
     followers: int
+    organization: Optional[str] = None # JESUS FUCKING CHRIST, HELP ME, THIS API IS A MESS, THIS THING DOESN'T EVEN PRESENT IN DOCS
     categories: Optional[list[str]] = None
     requested_status: Optional[RequestedStatus] = None
     additional_categories: Optional[list[str]] = None
@@ -244,14 +259,15 @@ class Project:
     source_url: Optional[str] = None
     wiki_url: Optional[str] = None
     discord_url: Optional[str] = None
-    donation_urls: Optional[ProjectDonationURL] = None
+    donation_urls: Optional[list[ProjectDonationURL]] = None
     icon_url: Optional[str] = None
     color: Optional[int] = None
     thread_id: Optional[str] = None
     monetization_status: Optional[MonetizationStatus] = None
     approved: Optional[datetime] = None
     queued: Optional[datetime] = None
-    moderator_message: Optional[object] = None # DEPRECATED
+    moderator_message: Optional[str] = None # DEPRECATED, DO NOT USE, WILL ALWAYS RETURN NULL
+    body_url: Optional[str] = None # DEPRECATED, DO NOT USE, WILL ALWAYS RETURN NULL
     license: Optional[ProjectLicense] = None 
     versions: Optional[list[str]] = None
     game_versions: Optional[list[str]] = None
@@ -355,50 +371,3 @@ class TeamMember:
     permissions: Optional[TeamMemberPermissions] = None
     payouts_split: Optional[int] = None
     ordering: Optional[int] = None
-
-class Facet(str, Enum):
-    """
-    These are the most commonly used facet types:
-    """
-    ProjectType = "project_type"
-    Categories = "categories"
-    Versions = "versions"
-    ClientSide = "client_side"
-    ServerSide = "server_side"
-    OpenSource = "open_source"
-    """
-    Several others are also available for use, though these should not be used outside very specific use cases:
-    """
-    Title = "title"
-    Author = "author"
-    Follows = "follows"
-    ProjectID = "project_id"
-    License = "license"
-    Downloads = "downloads"
-    Color = "color"
-    CreatedTimestamp = "created_timestamp"
-    ModifiedTimestamp = "modified_timestamp"
-    def __lt__(a: Self, b: int|str|datetime) -> str:
-        return(FacetContainer(a.value, '<', b))
-    def __gt__(a: Self, b: int|str) -> str:
-        return(FacetContainer(a.value, '>', b))
-    def __le__(a: Self, b: int|str|datetime) -> str:
-        return(FacetContainer(a.value, '<=', b))
-    def __ge__(a: Self, b: int|str) -> str:
-        return(FacetContainer(a.value, '>=', b))
-    def __eq__(a: Self, b: int|str|datetime) -> str:
-        return(FacetContainer(a.value, ':', b))
-
-@dataclass
-class FacetContainer:
-    key: Facet
-    sign: str
-    value: int|str|datetime
-    def get(self):
-        return(f'"{self.key}{self.sign}{self.value}"')
-
-def facets_to_str(facets: list[list[FacetContainer]]):
-    result = ','.join([f'[{','.join([facet.get() for facet in group])}]' for group in facets])
-    return result
-
-#facets = [[Facet.Author=='coffeemeow'], [Facet.Versions == '1.20.1', Facet.Versions == '1.20.4']]
