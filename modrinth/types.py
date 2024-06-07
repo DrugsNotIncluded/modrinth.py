@@ -24,19 +24,22 @@ class endpoint:
     method: req_method
     endpoint: Path
 
-class SortingMethod(str, Enum):
+@dataclass(frozen=True)
+class SortingMethod:
     Relevance = "relevance"
     Downloads = "downloads"
     Follows = "follows"
     Newest = "newest"
     Updated = "updated"
 
-class Required(str, Enum):
+@dataclass(frozen=True)
+class Required:
     Required = "required"
     Optional = "optional"
     Unsupported = "unsupported"
 
-class Status(str, Enum):
+@dataclass(frozen=True)
+class Status:
     Approved = "approved"
     Archived = "archived"
     Rejected = "rejected"
@@ -48,25 +51,29 @@ class Status(str, Enum):
     Private = "private"
     Unknown = "unknown"
 
-class RequestedStatus(str, Enum):
+@dataclass(frozen=True)
+class RequestedStatus:
     Approved = "approved"
     Archived = "archived"
     Unlisted = "unlisted"
     Private = "private"
     Draft = "draft"
 
-class ProjectType(str, Enum):
+@dataclass(frozen=True)
+class ProjectType:
     Mod = "mod"
     Modpack = "modpack"
     Resourcepack = "resourcepack"
     Shader = "shader"
 
-class MonetizationStatus(str, Enum):
+@dataclass(frozen=True)
+class MonetizationStatus:
     Monetized = "monetized"
     Demonetized = "demonetized"
     ForceDemonetized = "force-demonetized"
 
-class VersionType(str, Enum):
+@dataclass(frozen=True)
+class VersionType:
     Release = "release"
     Beta = "beta"
     Alpha = "alpha"
@@ -115,7 +122,8 @@ class VersionFileHashes:
     sha512: str
     sha1: str
 
-class VersionFileType(str, Enum):
+@dataclass(frozen=True)
+class VersionFileType:
     """
     The type of the additional file, used mainly for adding resource packs to datapacks
     """
@@ -131,7 +139,8 @@ class VersionFile:
     size: int
     file_type: Optional[VersionFileType] = None
 
-class VersionDepencencyType(str, Enum):
+@dataclass(frozen=True)
+class VersionDepencencyType:
     """
     The type of dependency that this version has
     """
@@ -159,16 +168,19 @@ class UserBadges(Flag):
     CONTRIBUTOR = auto()
     TRANSLATOR = auto()
 
-class UserRole(str, Enum):
+@dataclass(frozen=True)
+class UserRole:
     Admin = "admin"
     Moderator = "moderator"
     Developer = "developer"
 
-class UserPayoutWallet(str, Enum):
+@dataclass(frozen=True)
+class UserPayoutWallet:
     Paypal = "paypal"
     Venmo = "venmo"
 
-class UserPayoutWalletType(str, Enum):
+@dataclass(frozen=True)
+class UserPayoutWalletType:
     Email = "email"
     Phone = "phone"
     UserHandle = "user_handle"
@@ -251,7 +263,7 @@ class Project:
     published: datetime
     updated: datetime
     followers: int
-    organization: Optional[str] = None # JESUS FUCKING CHRIST, HELP ME, THIS API IS A MESS, THIS THING DOESN'T EVEN PRESENT IN DOCS
+    organization: Optional[str] = None # JESUS FUCKING CHRIST, HELP ME, THIS API IS A MESS, THIS THING DOESN'T EVEN PRESENT IN DOCS, ah nvm, it's v3 leaking into v2
     categories: Optional[list[str]] = None
     requested_status: Optional[RequestedStatus] = None
     additional_categories: Optional[list[str]] = None
@@ -272,7 +284,7 @@ class Project:
     versions: Optional[list[str]] = None
     game_versions: Optional[list[str]] = None
     loaders: Optional[list[str]] = None 
-    gallery: Optional[GalleryImage] = None
+    gallery: Optional[list[GalleryImage]] = None
 
 @dataclass
 class ProjectResult:

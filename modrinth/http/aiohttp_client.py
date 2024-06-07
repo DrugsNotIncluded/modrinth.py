@@ -5,7 +5,7 @@ from typing import Any, Optional
 import aiohttp
 from aiohttp.client import DEFAULT_TIMEOUT, ClientTimeout
 from aiolimiter import AsyncLimiter
-from .errors import DeprecatedAPI, InvalidScope
+from .errors import *
 import asyncio
 
 # Dirty http client implementation with throttling support via aiolimiter
@@ -31,8 +31,6 @@ class AiohttpClient(HTTPClient):
         self.ratelimit_headers = dict
 
         _headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
             "User-Agent": user_agent
         }
         if api_key:
@@ -47,64 +45,77 @@ class AiohttpClient(HTTPClient):
             headers=_headers,
             timeout=timeout,
             trust_env=True,
-            raise_for_status=True
         )
         self._sess.trace_configs
 
     @staticmethod
     async def _resolve_http(response) -> None:
+        if response.status == 204:
+            return {'text':'OK'}
         if response.status == 410:
-            print(await response.text)
-            raise DeprecatedAPI
+            raise DeprecatedAPI(response.text)
         if response.status == 401:
-            print(await response.text)
-            raise InvalidScope
+            raise InvalidScope(response.text)
+        if response.status == 404:
+            raise NotFound(response.text)
         if response.headers['X-Ratelimit-Remaining'] == 0:
             await asyncio.sleep(res.headers['X-Ratelimit-Reset'])
 
     @property
     def headers(self):
+        """
+        Global session headers modification, nonusable otherwise
+        """
         return self._sess.headers
 
     async def close(self):
         await self._sess.close()
 
-    async def get(self, url: str):
+    async def get(self, url: str, json: Optional[Any], _headers = Optional[dict]):
         async with self.ratelimit:
-            res = await self._sess.get(url)
-        await self._resolve_http(res)
+            res = await self._sess.get(url, headers=_headers, json=json)
+        h = await self._resolve_http(res)
+        if h: return h
         return await res.json()
 
-    async def post(self, url: str, data: Optional[dict] = None):
+    async def post(self, url: str, data: Optional[dict], json: Optional[Any], _headers = Optional[dict]):
         async with self.ratelimit:
-            res = await self._sess.post(url, data=data)
-        await self._resolve_http(res)
+            res = await self._sess.post(url, data=data, headers=_headers, json=json)
+        h = await self._resolve_http(res)
+        if h: return h
         return await res.json()
 
-    async def download(self, url: str, chunk_size: int) -> AsyncIterator[bytes]:
+    async def download(self, url: str, json: Optional[Any], chunk_size: int, _headers = Optional[dict]) -> AsyncIterator[bytes]:
         async with self.ratelimit:
-            res = await self._sess.get(url, allow_redirects=True)
-        await self._resolve_http(res)
+            res = await self._sess.get(url, allow_redirects=True, headers=_headers, json=json)
+        h = await self._resolve_http(res)
+        if h: return h
         return res.content.iter_chunked(chunk_size)
 
-    async def put(self, url: str, data: Optional[dict] = None):
+    async def put(self, url: str, data: Optional[dict], json = Optional[Any], _headers = Optional[dict]):
         async with self.ratelimit:
-            res = await self._sess.put(url, data=data)
-        await self._resolve_http(res)
+            res = await self._sess.put(url, data=data, headers=_headers, json=json)
+        h = await self._resolve_http(res)
+        if h: return h
         return await res.json()
 
-    async def delete(self, url: str):
+    async def delete(self, url: str, json = Optional[Any], _headers = Optional[dict]):
         async with self.ratelimit:
-            res = await self._sess.delete(url)
+            res = await self._sess.delete(url, headers=_headers, json=json)
         await self._resolve_http(res)
-        return await res.json()
+        h = await self._resolve_http(res)
+        if h: return h
+        return res.json()
 
-    async def patch(self, url: str, data: Optional[dict] = None):
+    async def patch(self, url: str, data: Optional[dict], json: Optional[Any], _headers = Optional[dict]):
         async with self.ratelimit:
-            res = await self._sess.patch(url, data=data)
-        await self._resolve_http(res)
+            res = await self._sess.patch(url, data=data, headers=_headers, json=json)
+        h = await self._resolve_http(res)
+        if h: return h
         return await res.json()
 
     @property
     def session(self):
         return self._sess
+
+# TODO: I DEFINITELY SHOULD rewrite error and response handling with decorators

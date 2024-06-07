@@ -3,7 +3,8 @@ from typing import Self
 from datetime import datetime
 from dataclasses import dataclass
 
-class Facet(str, Enum):
+@dataclass(frozen=True)
+class Facet:
     """
     These are the most commonly used facet types:
     """
@@ -26,15 +27,16 @@ class Facet(str, Enum):
     CreatedTimestamp = "created_timestamp"
     ModifiedTimestamp = "modified_timestamp"
     def __lt__(a: Self, b: int|str|datetime) -> str:
-        return(FacetContainer(a.value, '<', b))
+        return(FacetContainer(a, '<', b))
     def __gt__(a: Self, b: int|str) -> str:
-        return(FacetContainer(a.value, '>', b))
+        return(FacetContainer(a, '>', b))
     def __le__(a: Self, b: int|str|datetime) -> str:
-        return(FacetContainer(a.value, '<=', b))
+        return(FacetContainer(a, '<=', b))
     def __ge__(a: Self, b: int|str) -> str:
-        return(FacetContainer(a.value, '>=', b))
+        return(FacetContainer(a, '>=', b))
     def __eq__(a: Self, b: int|str|datetime) -> str:
-        return(FacetContainer(a.value, ':', b))
+        return(FacetContainer(a, ':', b))
+
 
 @dataclass
 class FacetContainer:

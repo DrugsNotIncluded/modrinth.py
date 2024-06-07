@@ -14,6 +14,8 @@ DEFAULT_RATELIMIT_INTERVAL = 60 # In seconds
 TEST_BASE_API = 'https://staging-api.modrinth.com'
 PROD_BASE_API = 'https://api.modrinth.com'
 
+
+# This will eventually just resemble aiohttp.request method skeleton, lol
 class HTTPClient(metaclass=ABCMeta):
     """required types"""
 

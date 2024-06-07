@@ -9,3 +9,6 @@ class DeprecatedAPI(LabrinthAPIException):
 
 class InvalidScope(LabrinthAPIException):
     """Invalid scope for provided token."""
+
+class NotFound(LabrinthAPIException):
+    """Not Found"""
