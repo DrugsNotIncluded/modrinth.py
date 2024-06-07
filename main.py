@@ -1,21 +1,11 @@
-import asyncio
-from modrinth.http.labrinth_http import LabrinthHTTP
-from modrinth.labrinth import ModrinthClient
-from modrinth.types import Project, Required, ProjectType
-from modrinth.facets import Facet
-from dataclass_wizard import asdict
+import asyncio, json
+from modrinthpy import ModrinthClient
 
-import aiohttp, json
-from aiohttp import FormData
-from aiohttp.client import DEFAULT_TIMEOUT
-
-
-my_test_token ='mrp_nIdEjX5pFjXVBRLJXmIbjn6IC5zPteo3O29KC6utB6u6ugLvWPlHSwq8HtiH'
 project_id = 'zL1fFCOd'
 
 async def main():
     try:
-        client = ModrinthClient(api_key=my_test_token)
+        #client = ModrinthClient(api_key=my_test_token)
         #client = ModrinthClient()
         #response = await client.Projects.get_multiple_projects(ids=['create','sodium'])
 
@@ -40,8 +30,20 @@ async def main():
         #response = await client.Projects.modify_project(project_id, title='Coffee test num2')
         #response = await client.Projects.check_id_validity(project_id)
         #response = await client.Projects.add_gallery_image(project_id, 'test.webp', featured=True, extension='webp')
+        client = ModrinthClient(my_test_token)
+        response = await client.Projects.search_project(query='Create')
         print(response)
     finally:
-        await client._labrinth_client.close()
+        await client.close()
     
+async def test():
+    DEFAULT_USERAGENT = "github.com/DrugsNotIncluded/modrinth.py (coffeemeowgirl@gmail.com , t.me/humanised_doll)"
+    BASE_API = 'https://api.modrinth.com'
+    """ test_endpoint = '/v2/project/create'
+    client = AiohttpClient(user_agent=DEFAULT_USERAGENT)
+    response = await client.get(test_endpoint)
+    print(json.loads(await response.read())) """
+    client = ModrinthClient()
+    print(await client.Projects.get_project('create'))
+
 asyncio.run(main())

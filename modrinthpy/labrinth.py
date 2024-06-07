@@ -1,14 +1,27 @@
 import asyncio
 from types import SimpleNamespace
+from typing import TypeVar, Generic
 from dataclass_wizard import fromdict, asdict
 import aiohttp, json
 from fnmatch import fnmatch
 
 from .types import *
-from .http.labrinth_http import LabrinthHTTP
+from .api import LabrinthHTTP
 from .facets import Facet, facets_to_str
 from .endpoints import endpoints
 
+T = TypeVar('T')
+
+async def tojson(o: bytes):
+    return json.loads(await o.read())
+
+def asobj(cls: Generic[T], d: object) -> T:
+    """Converts response content to class"""
+    return fromdict(cls, d)
+
+def asobj_list(cls: Generic[T], d: object) -> list[T]:
+    """Converts response content to list[class]"""
+    return [fromdict(cls, t) for t in d]
 
 class ModrinthProjects:
     def __init__(self, labrinth_client):
@@ -35,16 +48,16 @@ class ModrinthProjects:
         if offset: query_pass['offset'] = offset
         if limit: query_pass['limit'] = limit
         response = await self._api(endpoints['search_projects'], query=query_pass)
-        hits = [fromdict(ProjectResult, project) for project in response['hits']]
-        return(hits)
+        hits = asobj_list(ProjectResult, (await tojson(response))['hits'])
+        return hits
 
     async def get_project(self, id: str) -> Project:
         """
         :param id: Accepts id or slug.
         """
         response = await self._api(endpoints["get_project"], params={"id":id})
-        project = fromdict(Project, response)
-        return(project)
+        project = asobj(Project, await tojson(response))
+        return project
 
     async def modify_project(
         self,
@@ -87,11 +100,11 @@ class ModrinthProjects:
         if license_url: data['license_url'] = license_url
 
         response = await self._api(endpoints["modify_project"], params={"id":id}, json=data)
-        return response
+        return response.read()
 
     async def delete_project(self, id: str):
         response = await self._api(endpoints["delete_project"], params={"id":id})
-        return(response)
+        return response.read()
 
     async def get_multiple_projects(self, ids: list[str]) -> list[Project]:
         """
@@ -99,8 +112,8 @@ class ModrinthProjects:
         """
         ids = f"[{','.join([f'"{id}"' for id in ids])}]"
         response = await self._api(endpoints["get_multiple_projects"], query={"ids":ids})
-        projects = [fromdict(Project, project) for project in response]
-        return(projects)
+        projects = asobj_list(Project, await tojson(response))
+        return projects
 
     async def bulk_edit_projects(
         self,
@@ -133,12 +146,11 @@ class ModrinthProjects:
         if wiki_url: data['wiki_url'] = wiki_url
         if discord_url: data['discord_url'] = discord_url
         response = await self._api(endpoints['bulk_edit_projects'], data=data)
-        return response
 
     async def get_random_projects(count: int) -> list[Project]:
         response = self._api(endpoints['get_random_projects'], query={"count":count})
-        projects = [fromdict(Project, project) for project in response]
-        return(projects)
+        projects = asobj_list(Project, await tojson(response))
+        return projects
     
     async def create_project(
         self,
@@ -197,7 +209,7 @@ class ModrinthProjects:
                 icon_part.set_content_disposition('form-data', name='icon')
 
             response = await self._api(endpoints['create_project'], data=mp)
-        return(response)
+        return asobj(Project, tojson(response))
 
     async def change_project_icon(self, id: str, icon: str|bytearray, extension: Optional[str] = None):
         acceptable_extensions = ["*.png","*.jpg","*.jpeg","*.bmp","*.gif","*.webp","*.svg","*.svgz","*.rgb"]
@@ -209,16 +221,14 @@ class ModrinthProjects:
                     with open(icon, 'rb') as icon_file:
                         icon = icon_file.read()
 
-        response = await self._api(endpoints['change_project_icon'], data=icon, params={'id':id}, query={"ext":extension[2:]})
-        return(response)
+        await self._api(endpoints['change_project_icon'], data=icon, params={'id':id}, query={"ext":extension[2:]})
 
     async def delete_project_icon(self, id: str):
         response = await self._api(endpoints['delete_project_icon'], params={'id':id})
-        return(response)
 
-    async def check_id_validity(self, id: str): #id or slug
+    async def check_id_validity(self, id: str) -> str: #id or slug
         response = await self._api(endpoints["check_id_validity"], params={"id":id})
-        return(response)
+        return await tojson(response)['id']
 
     async def add_gallery_image(
         self, 
@@ -239,9 +249,7 @@ class ModrinthProjects:
             "ext":extension
             }
         if ordering: query["ordering"] = ordering
-        response = await self._api(endpoints["add_gallery_image"], params={"id":id}, data=image, query=query)
-        return(response)
-
+        await self._api(endpoints["add_gallery_image"], params={"id":id}, data=image, query=query)
 
     async def modify_gallery_image(
         self,
@@ -257,24 +265,23 @@ class ModrinthProjects:
         if title: query["title"] = title
         if description: query["description"] = description
         if ordering: query["ordering"] = ordering
-        response = await self._api(endpoints["modify_gallery_image"], query=query, params={'id':id})
-        return(response)
+        await self._api(endpoints["modify_gallery_image"], query=query, params={'id':id})
 
     async def delete_gallery_image(self, id: str, url: str):
-        response = await self._api(endpoints["delete_gallery_image"], query={"url":url})
-        return(response)
+        await self._api(endpoints["delete_gallery_image"], query={"url":url})
     
-    async def get_project_dependencies(self, id:str):
+    async def get_project_dependencies(self, id:str) -> tuple[list[Project], list[Version]]:
         response = await self._api(endpoints["get_project_dependencies"], params={'id':id})
-        return(response)
+        response = await tojson(response)
+        projects = asobj_list(Project, response['projects'])
+        versions = asobj_list(Version, response['versions'])
+        return projects, versions
 
     async def follow_project(self, id:str):
-        response = await self._api(endpoints["follow_project"], params={"id":id})
-        return(response)
+        await self._api(endpoints["follow_project"], params={"id":id})
 
     async def unfollow_project(self, id:str):
-        response = await self._api(endpoints["unfollow_project"], params={"id":id})
-        return(response)
+        await self._api(endpoints["unfollow_project"], params={"id":id})
 
     async def schedule_project(
         self,
@@ -282,9 +289,7 @@ class ModrinthProjects:
         time: datetime,
         requested_status: RequestedStatus
         ):
-        response = await self._api(endpoints["schedule_project"], params={'id':id}, json={"time":time, "requested_status":requested_status})
-        return(response)
-        
+        await self._api(endpoints["schedule_project"], params={'id':id}, json={"time":time, "requested_status":requested_status})
         
 
 class ModrinthClient:
@@ -299,6 +304,9 @@ class ModrinthClient:
         # API parts:
         self._Projects = ModrinthProjects(self._labrinth_client)
         #self._Versions = ModrinthVersions(self._labrinth_client)
+
+    async def close(self):
+       await self._labrinth_client.close()
     
     @property
     def Projects(self) -> ModrinthProjects: return(self._Projects)
